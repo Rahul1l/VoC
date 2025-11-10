@@ -1,7 +1,6 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, send_from_directory, request, jsonify, session, redirect, url_for
 from pymongo import MongoClient
 from bson import ObjectId
-from transformers import pipeline
 from openai import OpenAI
 import os
 from config import Config
@@ -12,48 +11,78 @@ app = Flask(__name__)
 app.secret_key = Config.SECRET_KEY
 
 # MongoDB connection
-client = MongoClient(Config.MONGODB_URI)
-db = client['voc_db']
-universities_collection = db['universities']
-feedback_collection = db['feedback']
-
-# Initialize RoBERTa sentiment analyzer
 try:
-    sentiment_analyzer = pipeline("sentiment-analysis", model="cardiffnlp/twitter-roberta-base-sentiment-latest")
+    client = MongoClient(Config.MONGODB_URI)
+    db = client['voc_db']
+    universities_collection = db['universities']
+    feedback_collection = db['feedback']
 except Exception as e:
-    print(f"Error loading RoBERTa model: {e}")
-    sentiment_analyzer = None
+    print(f"Error connecting to MongoDB: {e}")
+    client = None
+    db = None
+    universities_collection = None
+    feedback_collection = None
 
 # Initialize OpenAI
-openai_client = OpenAI(api_key=Config.OPENAI_API_KEY)
+try:
+    if Config.OPENAI_API_KEY:
+        openai_client = OpenAI(api_key=Config.OPENAI_API_KEY)
+    else:
+        print("Warning: OPENAI_API_KEY not found in environment")
+        openai_client = None
+except Exception as e:
+    print(f"Error initializing OpenAI: {e}")
+    openai_client = None
 
-def analyze_sentiment_roberta(text):
-    """Analyze sentiment using RoBERTa model and return score 0-5"""
-    if not sentiment_analyzer or not text:
+def analyze_sentiment_openai(text):
+    """Analyze sentiment using OpenAI and return score 0-5"""
+    if not text or not text.strip():
+        return 3.0
+    
+    if not openai_client:
+        print("OpenAI client not initialized, returning default score")
         return 3.0
     
     try:
-        result = sentiment_analyzer(text)[0]
-        label = result['label']
-        score = result['score']
+        prompt = f"""Analyze the sentiment of the following feedback text and provide a score from 0 to 5, where:
+- 0-1.5: Very negative
+- 1.5-2.5: Negative
+- 2.5-3.5: Neutral
+- 3.5-4.5: Positive
+- 4.5-5: Very positive
+
+Text: {text}
+
+Respond with ONLY a number between 0 and 5 (e.g., 3.7), nothing else."""
         
-        # Map sentiment to 0-5 scale
-        # LABEL_0: negative, LABEL_1: neutral, LABEL_2: positive
-        if 'LABEL_0' in label or 'NEGATIVE' in label.upper():
-            # Negative: 0-2.5
-            return round(score * 2.5, 2)
-        elif 'LABEL_1' in label or 'NEUTRAL' in label.upper():
-            # Neutral: 2.5-3.5
-            return round(2.5 + (score * 1.0), 2)
-        else:
-            # Positive: 3.5-5
-            return round(3.5 + (score * 1.5), 2)
+        response = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a sentiment analysis expert. Respond with only a number between 0 and 5."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=10,
+            temperature=0.3
+        )
+        
+        score_text = response.choices[0].message.content.strip()
+        # Extract number from response
+        try:
+            score = float(score_text)
+            # Ensure score is between 0 and 5
+            score = max(0.0, min(5.0, score))
+            return round(score, 2)
+        except ValueError:
+            return 3.0
     except Exception as e:
         print(f"Error in sentiment analysis: {e}")
         return 3.0
 
 def get_improvement_suggestions(feedback_text, kpi_scores):
     """Generate improvement suggestions using OpenAI"""
+    if not openai_client:
+        return "Unable to generate suggestions - OpenAI client not initialized."
+    
     try:
         prompt = f"""Based on the following feedback and KPI scores, provide specific, actionable improvement suggestions:
 
@@ -83,7 +112,7 @@ def index():
         return redirect(url_for('admin_page'))
     if 'user_logged_in' in session:
         return redirect(url_for('feedback_page'))
-    return render_template('index.html', page='login')
+    return send_from_directory('.', 'index.html')
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -120,13 +149,13 @@ def logout():
 def admin_page():
     if 'admin_logged_in' not in session:
         return redirect(url_for('index'))
-    return render_template('index.html', page='admin')
+    return send_from_directory('.', 'index.html')
 
 @app.route('/feedback')
 def feedback_page():
     if 'user_logged_in' not in session:
         return redirect(url_for('index'))
-    return render_template('index.html', page='feedback')
+    return send_from_directory('.', 'index.html')
 
 @app.route('/api/universities', methods=['POST'])
 def create_university():
@@ -229,10 +258,10 @@ def submit_feedback():
     if not course_name or not trainer_name or not answer1 or not answer2 or not answer3:
         return jsonify({'success': False, 'message': 'Course name, trainer, and answers 1-3 are required'})
     
-    # Calculate KPI scores using RoBERTa
-    kpi1 = analyze_sentiment_roberta(answer1)
-    kpi2 = analyze_sentiment_roberta(answer2)
-    kpi3 = analyze_sentiment_roberta(answer3)
+    # Calculate KPI scores using OpenAI
+    kpi1 = analyze_sentiment_openai(answer1)
+    kpi2 = analyze_sentiment_openai(answer2)
+    kpi3 = analyze_sentiment_openai(answer3)
     final_kpi = round((kpi1 + kpi2 + kpi3) / 3, 2)
     
     # Generate improvement suggestions
