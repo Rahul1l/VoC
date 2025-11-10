@@ -264,15 +264,13 @@ def submit_feedback():
     kpi3 = analyze_sentiment_openai(answer3)
     final_kpi = round((kpi1 + kpi2 + kpi3) / 3, 2)
     
-    # Generate improvement suggestions
-    all_feedback = f"Q1: {answer1}\nQ2: {answer2}\nQ3: {answer3}\nQ4: {answer4}"
+    # KPI scores
     kpi_scores = {
         'Learning Outcome and Skill Development': kpi1,
         'Instructor Industry Alignment': kpi2,
         'Industry Application Readiness': kpi3,
         'Final KPI': final_kpi
     }
-    improvement_suggestions = get_improvement_suggestions(all_feedback, kpi_scores)
     
     # Save to database
     feedback_collection.insert_one({
@@ -285,7 +283,6 @@ def submit_feedback():
         'answer3': answer3,
         'answer4': answer4,
         'kpi_scores': kpi_scores,
-        'improvement_suggestions': improvement_suggestions,
         'submitted_at': datetime.now()
     })
     

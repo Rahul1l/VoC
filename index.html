@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoC - Voice of Customer</title>
+    <title>VoC - Voice of Client</title>
     <style>
         * {
             margin: 0;
@@ -480,7 +480,7 @@
     <div id="loginPage" class="container">
         <div class="login-container">
             <h1>VoC System</h1>
-            <p>Voice of Customer Feedback Platform</p>
+            <p>Voice of Client Feedback Platform</p>
             <div id="loginAlert" class="alert"></div>
             <form id="loginForm">
                 <div class="form-group">
@@ -969,19 +969,6 @@
                     <p>${fb.answer4 || 'No additional comments'}</p>
                 </div>
             `;
-
-            if (fb.improvement_suggestions) {
-                const suggestions = fb.improvement_suggestions.split('\n').filter(s => s.trim());
-                html += `<div class="suggestions">
-                    <h4>Areas of Improvement</h4>
-                    <ul>`;
-                suggestions.forEach(s => {
-                    if (s.trim()) {
-                        html += `<li>${s.replace(/^[-•*]\s*/, '')}</li>`;
-                    }
-                });
-                html += `</ul></div>`;
-            }
 
             document.getElementById('detailContent').innerHTML = html;
             document.getElementById('detailModal').classList.add('active');
