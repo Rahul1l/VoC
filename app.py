@@ -189,7 +189,7 @@ def get_universities():
     if 'admin_logged_in' not in session:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
     
-    universities = list(universities_collection.find({}, {'password': 0}))
+    universities = list(universities_collection.find({}))
     for uni in universities:
         uni['_id'] = str(uni['_id'])
     

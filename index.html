@@ -766,10 +766,11 @@
             let html = '';
             for (const [university, items] of Object.entries(grouped)) {
                 html += `<div class="group-header">${university}</div>`;
-                html += '<div class="table-container"><table><thead><tr><th>Username</th><th>Actions</th></tr></thead><tbody>';
+                html += '<div class="table-container"><table><thead><tr><th>Username</th><th>Password</th><th>Actions</th></tr></thead><tbody>';
                 items.forEach(item => {
                     html += `<tr>
                         <td>${item.username}</td>
+                        <td>${item.password || 'N/A'}</td>
                         <td>
                             <div class="action-btns">
                                 <button class="btn-sm btn-edit" onclick="editUniversity('${item._id}')">Edit</button>
