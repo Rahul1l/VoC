@@ -272,6 +272,10 @@ def submit_feedback():
         'Final KPI': final_kpi
     }
     
+    # Generate improvement suggestions
+    all_feedback = f"Q1: {answer1}\nQ2: {answer2}\nQ3: {answer3}\nQ4: {answer4}"
+    improvement_suggestions = get_improvement_suggestions(all_feedback, kpi_scores)
+    
     # Save to database
     feedback_collection.insert_one({
         'university_name': session.get('university_name', ''),
@@ -283,6 +287,7 @@ def submit_feedback():
         'answer3': answer3,
         'answer4': answer4,
         'kpi_scores': kpi_scores,
+        'improvement_suggestions': improvement_suggestions,
         'submitted_at': datetime.now()
     })
     

@@ -1009,6 +1009,19 @@
                 </div>
             `;
 
+            if (fb.improvement_suggestions) {
+                const suggestions = fb.improvement_suggestions.split('\n').filter(s => s.trim());
+                html += `<div class="suggestions">
+                    <h4>Areas of Improvement</h4>
+                    <ul>`;
+                suggestions.forEach(s => {
+                    if (s.trim()) {
+                        html += `<li>${s.replace(/^[-•*]\s*/, '')}</li>`;
+                    }
+                });
+                html += `</ul></div>`;
+            }
+
             document.getElementById('detailContent').innerHTML = html;
             document.getElementById('detailModal').classList.add('active');
         }
