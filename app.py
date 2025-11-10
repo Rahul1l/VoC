@@ -316,6 +316,15 @@ def get_feedback_detail(feedback_id):
     
     return jsonify({'success': True, 'data': feedback})
 
+@app.route('/api/feedback/<feedback_id>', methods=['DELETE'])
+def delete_feedback(feedback_id):
+    if 'admin_logged_in' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    feedback_collection.delete_one({'_id': ObjectId(feedback_id)})
+    
+    return jsonify({'success': True, 'message': 'Feedback deleted successfully'})
+
 @app.route('/api/trainers', methods=['GET'])
 def get_trainers():
     return jsonify({'success': True, 'data': Config.TRAINERS})

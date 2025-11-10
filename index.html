@@ -882,19 +882,57 @@
                 return;
             }
 
-            let html = '<div class="feedback-list">';
+            // Group by university name
+            const grouped = {};
             feedbackList.forEach(fb => {
-                html += `<div class="feedback-item">
-                    <div class="feedback-item-info">
-                        <h4>${fb.university_name || 'Unknown'} - ${fb.course_name}</h4>
-                        <p>Trainer: ${fb.trainer_name} | Submitted: ${new Date(fb.submitted_at).toLocaleString()}</p>
-                    </div>
-                    <button class="btn-sm btn-view" onclick="viewFeedbackDetail('${fb._id}')">View Detail</button>
-                </div>`;
+                const universityName = fb.university_name || 'Unknown';
+                if (!grouped[universityName]) {
+                    grouped[universityName] = [];
+                }
+                grouped[universityName].push(fb);
             });
-            html += '</div>';
+
+            let html = '';
+            for (const [university, feedbacks] of Object.entries(grouped)) {
+                html += `<div class="group-header">${university}</div>`;
+                html += '<div class="feedback-list">';
+                feedbacks.forEach(fb => {
+                    html += `<div class="feedback-item">
+                        <div class="feedback-item-info">
+                            <h4>${fb.course_name}</h4>
+                            <p>Trainer: ${fb.trainer_name} | Submitted: ${new Date(fb.submitted_at).toLocaleString()}</p>
+                        </div>
+                        <div class="action-btns">
+                            <button class="btn-sm btn-view" onclick="viewFeedbackDetail('${fb._id}')">View Detail</button>
+                            <button class="btn-sm btn-delete" onclick="deleteFeedback('${fb._id}')">Delete</button>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
 
             document.getElementById('feedbackContent').innerHTML = html;
+        }
+
+        // Delete Feedback
+        async function deleteFeedback(id) {
+            if (!confirm('Are you sure you want to delete this feedback?')) return;
+
+            try {
+                const response = await fetch(`/api/feedback/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showAlert('feedbackAlert', data.message, 'success');
+                    loadFeedback();
+                } else {
+                    showAlert('feedbackAlert', data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('feedbackAlert', 'Error deleting feedback', 'error');
+            }
         }
 
         // View Feedback Detail
